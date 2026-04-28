@@ -1,0 +1,18 @@
+name: Validate Demo PR
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'demos.json'
+      - '*/meta.json'
+      - '*.html'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate demos.json and each demo folder
+        run: node scripts/validate.js

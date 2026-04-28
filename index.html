@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LLM Ideas Brain</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0d0f14;
+      color: #e2e8f0;
+      font-family: 'SF Mono', ui-monospace, monospace;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      padding: 40px 48px 28px;
+      border-bottom: 1px solid #1e2330;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .site-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #5cf2ff;
+      letter-spacing: 3px;
+    }
+    .site-subtitle {
+      font-size: 14px;
+      color: #3a4560;
+      margin-top: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* ── Main ── */
+    main {
+      padding: 36px 48px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ── Footer ── */
+    .site-footer {
+      padding: 24px 48px;
+      border-top: 1px solid #5cf2ff10;
+      margin: 48px auto 0;
+      max-width: 1200px;
+    }
+    .site-footer p {
+      font-size: 11px;
+      color: #1e293b;
+    }
+
+    /* ── Card grid ── */
+    .demos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 14px;
+    }
+
+    /* ── Demo card ── */
+    .demo-card {
+      background: #12151d;
+      border: 1px solid #1e2535;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .demo-card:hover {
+      border-color: #5cf2ff44;
+      box-shadow: 0 0 0 1px #5cf2ff18;
+    }
+
+    /* card top bar */
+    .card-bar {
+      padding: 9px 14px;
+      border-bottom: 1px solid #1a2030;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #0f1219;
+    }
+    .traffic { display: flex; gap: 5px; align-items: center; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+    .card-filename {
+      font-size: 12px;
+      color: #8892a4;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .card-index {
+      font-size: 11px;
+      color: #3a4560;
+      white-space: nowrap;
+      font-family: ui-monospace, monospace;
+    }
+
+    /* card body */
+    .card-body { padding: 14px 16px 12px; }
+    .card-source {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 10px;
+    }
+    .card-repo { font-size: 12px; color: #5cf2ff; }
+    .card-repo .muted { color: #7a8499; }
+    .card-desc {
+      font-size: 13px;
+      color: #8892a4;
+      line-height: 1.65;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      margin-bottom: 14px;
+      min-height: 44px;
+    }
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 10px;
+      border-top: 1px solid #1a2030;
+    }
+    .card-date { font-size: 11px; color: #2a3348; }
+    .card-author { font-size: 11px; color: #2a3348; font-family: ui-monospace, monospace; }
+
+    /* ghost card */
+    .demo-card.ghost {
+      border-style: dashed;
+      border-color: #1a2535;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 148px;
+      cursor: default;
+    }
+    .ghost-inner { text-align: center; color: #222a38; }
+    .ghost-plus { font-size: 22px; margin-bottom: 4px; }
+    .ghost-label { font-size: 11px; letter-spacing: 1px; }
+
+    /* loading state */
+    .loading {
+      color: #2a3348;
+      font-size: 12px;
+      padding: 48px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <h1 class="site-title">all-you-can-dream</h1>
+  <div class="site-subtitle">LLM 概念實驗室 — 每個 idea 一個互動 Demo</div>
+</header>
+
+<main id="main">
+  <div class="loading">Loading demos...</div>
+</main>
+
+<footer class="site-footer">
+  <p>jason8745 · all-you-can-dream · GitHub Pages</p>
+</footer>
+
+<script>
+  async function loadDemos() {
+    const res = await fetch('demos.json');
+    const folders = await res.json();
+    const metas = await Promise.all(
+      folders.map(async (folder, i) => {
+        try {
+          const r = await fetch(`${folder}/meta.json`);
+          const m = await r.json();
+          return { ...m, folder, index: i + 1 };
+        } catch {
+          return null;
+        }
+      })
+    );
+    return metas.filter(Boolean);
+  }
+
+  function pad(n) {
+    return String(n).padStart(3, '0');
+  }
+
+  function renderCard(demo) {
+    const href = `${demo.folder}/${encodeURIComponent(demo.file)}`;
+    return `
+      <a class="demo-card" href="${href}">
+        <div class="card-bar">
+          <div class="traffic" aria-hidden="true">
+            <div class="dot dot-r"></div>
+            <div class="dot dot-y"></div>
+            <div class="dot dot-g"></div>
+          </div>
+          <span class="card-filename">${demo.folder}</span>
+          <span class="card-index">#${pad(demo.index)}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-source">
+            <div class="card-repo"><span class="muted">from </span>"${demo.author}/${demo.folder}"</div>
+          </div>
+          <div class="card-desc">${demo.description}</div>
+          <div class="card-footer">
+            <span class="card-date">${demo.date}</span>
+            <span class="card-author">@${demo.author}</span>
+          </div>
+        </div>
+      </a>`;
+  }
+
+  function renderGhost() {
+    return `
+      <div class="demo-card ghost">
+        <div class="ghost-inner">
+          <div class="ghost-plus">+</div>
+          <div class="ghost-label">add demo</div>
+        </div>
+      </div>`;
+  }
+
+  async function render() {
+    const main = document.getElementById('main');
+    try {
+      const demos = await loadDemos();
+      const cards = demos.map(renderCard).join('') + renderGhost();
+      main.innerHTML = `<div class="demos-grid">${cards}</div>`;
+    } catch (err) {
+      main.innerHTML = `<div class="loading">Failed to load demos.</div>`;
+      console.error(err);
+    }
+  }
+
+  render();
+</script>
+
+</body>
+</html>
